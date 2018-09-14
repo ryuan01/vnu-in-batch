@@ -1,0 +1,148 @@
+#!/bin/bash
+
+#TODO: somehow remove all files but leave the most recent ones
+
+# $1 zip folder
+# $2 dest folder (assignment #)
+unzip_all(){
+echo $#
+if [ "$#" -ne 2 ]; then
+  echo "error: unzip must take 2 parameters"
+else
+  unzip "$1" -d $2
+  cd $2
+  files=(*)
+  # echo "${files[@]}"
+  for i in "${!files[@]}"; do
+    echo ${files[i]}
+    new_dir=$(parse_folder_name "${files[i]}" "a1")
+    if [ "$new_dir" != "" ]; then
+      mkdir $new_dir
+      unzip "${files[i]}" -d $new_dir
+      rm "${files[i]}"
+    fi
+  done
+fi
+}
+
+# get folder_name from a long list of name
+# $1 is for folder name
+# $2 is assignment name
+parse_folder_name(){
+  if [ "$#" -ne 2 ]; then
+    # return would not be correct
+    # echo "error: parse_folder_name requires folder name"
+    echo ""
+    return 0
+  elif [ "${1: -4}" != ".zip" ]; then
+    echo ""
+    return 0
+  else
+    name="$2"
+    for w in $1
+    do
+      # echo $w
+      if [[ "$w" = "-" && "$start" = true ]]; then
+        break
+      fi
+      if [ "$start" = true ]; then
+        name=$(echo ${name}_${w})
+      fi
+      if [ "$w" = "-" ]; then
+        start=true
+      fi
+    done
+    echo $name
+  fi
+}
+
+# assume already have the folders unzipped
+# validate all the files under appropriate folders
+# also clean up the output
+validate(){
+  output_filename="output.txt"
+  cd $1
+  if [ -f $output_filename ]; then
+    rm $output_filename
+  fi
+  files=(*)
+  for i in "${!files[@]}"; do
+    new_dir=${files[i]}
+    if [[ -d $new_dir ]]; then
+      cd "$new_dir"
+      inner_files=(*)
+      for j in "${!inner_files[@]}"; do
+        if [[ "${inner_files[j]}" =~ __.* ]]; then
+          echo "skipping directory $new_dir/${inner_files[j]}"
+        else
+          echo "checking dir: $new_dir/${inner_files[j]}" >> ../$output_filename
+          java -jar ../../vnu.jar_18.8.29/dist/vnu.jar --skip-non-html ${inner_files[j]} >> ../$output_filename 2>&1
+          java -jar ../../vnu.jar_18.8.29/dist/vnu.jar --skip-non-css ${inner_files[j]} >> ../$output_filename 2>&1
+          echo -e "\n" >> ../$output_filename
+        fi
+      done
+      cd ..
+    else
+      echo "$new_dir is not directory...skipping..."
+    fi
+  done
+  # clean up
+  output_cleanup $output_filename
+}
+
+# clean up the output file to remove all the path that reveals my computer's path structure
+output_cleanup() {
+  file="$1"
+  if [ "$file" == "" ]; then
+    echo "-c must have src" >&2
+    exit 1
+  fi
+  echo "going to replace"
+  sed -i 's/file.*a1/file:\/a1/g' $file
+  sed -i '/\/\._/d' $file
+  # sed -i -e 's/checking/Checking/g' $file
+}
+
+# print usage
+print_usage(){
+  echo -e "usage: $0 [-u src] [-v src dst] \n\t-v: validate HTMLs under src folder and produce output.txt\n\t-u: unzip all .zip folders in src to specific named folders in dst\nnote: cannot run both at same time; ignores extra parameters"
+}
+
+# fname="70537-67796 - Michael Yee - Sep 11, 2018 423 PM - a1_Michael_Yee.zip.zip
+# "
+# parse_folder_name "$fname" "a1"
+
+# using flags
+# -v src: validate HTMLs under this folder and produce a output.txt with all results
+# -u src
+# adapted from https://stackoverflow.com/questions/18414054/bash-getopts-reading-optarg-for-optional-flags
+if [[ "$1" =~ ^((-{1,2})([Hh]$|[Hh][Ee][Ll][Pp])|)$ ]]; then
+  print_usage;
+  exit 1
+else
+  # while [[ $# -gt 0 ]]; do
+    opt="$1"
+    shift;
+    case "$opt" in
+      "-u")
+        src="$1";
+        dst="$2";
+        if [[ "$src" == "" || "$dst" == "" ]]; then
+          echo "-u must have src and dst" >&2
+          exit 1
+        fi
+        unzip_all $src $dest
+        echo "inside u $src $dst"
+        ;;
+      "-v")
+        echo "inside v"
+        src="$1";
+        validate $src
+        ;;
+      *)
+        echo "ERROR: Invalid option: \""$opt"\"" >&2
+        exit 1
+        ;;
+    esac
+  # done
+fi
