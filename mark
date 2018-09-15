@@ -1,6 +1,8 @@
 #!/bin/bash
 
-#TODO: somehow remove all files but leave the most recent ones
+#TODO: somehow remove extra zip but leave the most recent ones
+
+#TODO: make marking app, integrated with output.txt
 
 # $1 zip folder
 # $2 dest folder (assignment #)
@@ -22,6 +24,8 @@ else
       rm "${files[i]}"
     fi
   done
+  cd ..
+  rm "$1"
 fi
 }
 
@@ -97,15 +101,27 @@ output_cleanup() {
     echo "-c must have src" >&2
     exit 1
   fi
-  echo "going to replace"
+  echo "going to clean up "
   sed -i 's/file.*a1/file:\/a1/g' $file
-  sed -i '/\/\._/d' $file
-  # sed -i -e 's/checking/Checking/g' $file
+  echo "clean up done"
 }
 
 # print usage
 print_usage(){
-  echo -e "usage: $0 [-u src] [-v src dst] \n\t-v: validate HTMLs under src folder and produce output.txt\n\t-u: unzip all .zip folders in src to specific named folders in dst\nnote: cannot run both at same time; ignores extra parameters"
+  echo -e "usage: $0 [-u src] [-v src dst] [-i file_name]\n\t-i: validate individual HTML with file_name and produce tmp.txt\n\t-v: validate HTMLs under src folder and produce output.txt\n\t-u: unzip all .zip folders in src to specific named folders in dst\nnote: can only run 1 flag at same time; ignores extra parameters"
+}
+
+# mark individual files with regex as file names
+# $1 file name
+# saves to tmp.txt
+validate_individual(){
+  file_name="$1"
+  if [ "$file_name" == "" ]; then
+    echo "-i must have file_name; can be regex" >&2
+    exit 1
+  fi
+  java -jar vnu.jar_18.8.29/dist/vnu.jar --html "$file_name" > tmp.txt 2>&1
+  output_cleanup tmp.txt
 }
 
 # fname="70537-67796 - Michael Yee - Sep 11, 2018 423 PM - a1_Michael_Yee.zip.zip
@@ -127,17 +143,23 @@ else
       "-u")
         src="$1";
         dst="$2";
+        echo $src $dst
         if [[ "$src" == "" || "$dst" == "" ]]; then
           echo "-u must have src and dst" >&2
           exit 1
         fi
-        unzip_all $src $dest
+        unzip_all "$src" "$dst"
         echo "inside u $src $dst"
         ;;
       "-v")
         echo "inside v"
         src="$1";
         validate $src
+        ;;
+      "-i")
+        echo "inside i"
+        f="$1";
+        validate_individual "$1"
         ;;
       *)
         echo "ERROR: Invalid option: \""$opt"\"" >&2
