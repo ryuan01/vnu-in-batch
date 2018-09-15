@@ -91,24 +91,30 @@ validate(){
     fi
   done
   # clean up
-  output_cleanup $output_filename
+  output_cleanup $output_filename $2
 }
 
 # clean up the output file to remove all the path that reveals my computer's path structure
 output_cleanup() {
   file="$1"
+  folder="$2"
   if [ "$file" == "" ]; then
     echo "-c must have src" >&2
     exit 1
   fi
   echo "going to clean up "
-  sed -i 's/file.*a1/file:\/a1/g' $file
+  sed -i 's/file.*'$folder'/file:\/'$folder'/g' $file
   echo "clean up done"
 }
 
 # print usage
 print_usage(){
-  echo -e "usage: $0 [-u src] [-v src dst] [-i file_name]\n\t-i: validate individual HTML with file_name and produce tmp.txt\n\t-v: validate HTMLs under src folder and produce output.txt\n\t-u: unzip all .zip folders in src to specific named folders in dst\nnote: can only run 1 flag at same time; ignores extra parameters"
+  echo -e "usage: $0 [-u src folder] [-v src dst] [-i file_name]
+    \n\t-i: validate individual HTML with file_name and produce tmp.txt
+    \n\t-v: validate HTMLs under src folder and produce output.txt, only display path from folder onwards
+    \n\t-u: unzip all .zip folders in src to specific named folders in dst
+    \n\t-c: clean-up output.txt
+    \nnote: can only run 1 flag at same time; ignores extra parameters"
 }
 
 # mark individual files with regex as file names
@@ -154,12 +160,17 @@ else
       "-v")
         echo "inside v"
         src="$1";
-        validate $src
+        folder="$2";
+        validate $src $folder
         ;;
       "-i")
         echo "inside i"
         f="$1";
         validate_individual "$1"
+        ;;
+      "-c")
+        echo "clean up"
+        output_cleanup "$1" "$2"
         ;;
       *)
         echo "ERROR: Invalid option: \""$opt"\"" >&2
