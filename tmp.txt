@@ -1,0 +1,3 @@
+"file:/Assignment2.html":9.5-9.11: error: Stray end tag “head”.
+"file:/Assignment2.html":11.5-11.28: error: Start tag “body” seen but an element of the same type was already open.
+"file:/Assignment2.html":11.5-11.28: error fatal: Cannot recover after last error. Any further errors will be ignored.
