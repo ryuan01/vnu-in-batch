@@ -65,6 +65,7 @@ parse_folder_name(){
 # also clean up the output
 validate(){
   output_filename="output.txt"
+  p=$(pwd)
   cd $1
   if [ -f $output_filename ]; then
     rm $output_filename
@@ -80,8 +81,8 @@ validate(){
           echo "skipping directory $new_dir/${inner_files[j]}"
         else
           echo "checking dir: $new_dir/${inner_files[j]}" >> ../$output_filename
-          java -jar ../../vnu.jar_18.8.29/dist/vnu.jar --skip-non-html ${inner_files[j]} >> ../$output_filename 2>&1
-          java -jar ../../vnu.jar_18.8.29/dist/vnu.jar --skip-non-css ${inner_files[j]} >> ../$output_filename 2>&1
+          java -Xss512k -jar $p/node_modules/vnu-jar/build/dist/vnu.jar --skip-non-html ${inner_files[j]} >> ../$output_filename 2>&1
+          java -Xss512k -jar $p/node_modules/vnu-jar/build/dist/vnu.jar --skip-non-css ${inner_files[j]} >> ../$output_filename 2>&1
           echo -e "\n" >> ../$output_filename
         fi
       done
@@ -109,8 +110,8 @@ output_cleanup() {
 
 # print usage
 print_usage(){
-  echo -e "usage: $0 [-u src folder] [-v src dst] [-i path file_folder individual_folder]
-    \n\t-i: validate individual HTML with individual_folder/*/file_folder(or name) and produce tmp.txt, path is where vnu.jar folder is at, without last /
+  echo -e "usage: $0 [-u src folder] [-v src dst] [-i file_folder individual_folder]
+    \n\t-i: validate individual HTML with individual_folder/*/file_folder(or name) and produce tmp.txt
     \n\t-v: validate HTMLs under src folder and produce output.txt, only display path from folder onwards
     \n\t-u: unzip all .zip folders in src to specific named folders in dst
     \n\t-c: clean-up output.txt
@@ -121,13 +122,12 @@ print_usage(){
 # $1 file name
 # saves to tmp.txt
 validate_individual(){
-  path="$1"
   file_name="$3"
   if [ "$file_name" == "" ]; then
     echo "-i must have file_name; can be regex" >&2
     exit 1
   fi
-  java -Xss512k -jar "$path"/vnu.jar --skip-non-html "$file_name" > tmp.txt 2>&1
+  java -Xss512k -jar node_modules/vnu-jar/build/dist/vnu.jar --skip-non-html "$file_name" > tmp.txt 2>&1
   # $3 is assignment2
   output_cleanup tmp.txt $2
 }
@@ -167,7 +167,7 @@ else
         ;;
       "-i")
         echo "inside i"
-        validate_individual "$1" "$2" "$3"
+        validate_individual "$2" "$3"
         ;;
       "-c")
         echo "clean up"
