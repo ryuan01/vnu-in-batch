@@ -1,3 +1,6 @@
-"file:/Assignment2.html":9.5-9.11: error: Stray end tag “head”.
-"file:/Assignment2.html":11.5-11.28: error: Start tag “body” seen but an element of the same type was already open.
-"file:/Assignment2.html":11.5-11.28: error fatal: Cannot recover after last error. Any further errors will be ignored.
+"file:/a3_jackie_huang_partA/index.html":41.5-41.49: error: An “img” element must have an “alt” attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.
+"file:/a3_jackie_huang_partA/index.html":1.17-2.6: info warning: This document appears to be written in English. Consider adding “lang="en"” (or variant) to the “html” start tag.
+"file:/a3_jackie_huang_partB/index.html":41.5-41.49: error: An “img” element must have an “alt” attribute, except under certain conditions. For details, consult guidance on providing text alternatives for images.
+"file:/a3_jackie_huang_partB/index.html":51.13-51.16: error: Element “ul” not allowed as child of element “ul” in this context. (Suppressing further errors from this subtree.)
+"file:/a3_jackie_huang_partB/index.html":56.13-56.16: error: Element “ul” not allowed as child of element “ul” in this context. (Suppressing further errors from this subtree.)
+"file:/a3_jackie_huang_partB/index.html":1.17-2.6: info warning: This document appears to be written in English. Consider adding “lang="en"” (or variant) to the “html” start tag.

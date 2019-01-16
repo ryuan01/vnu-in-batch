@@ -4,6 +4,10 @@
 
 #TODO: make marking app, integrated with output.txt
 
+#TODO: unzip_all still have problem with "a2", because sometimes that isn't the path
+
+#TODO: ignore any file which starts with . do not let it recurse on its own.
+
 # $1 zip folder
 # $2 dest folder (assignment #)
 unzip_all(){
@@ -11,20 +15,21 @@ echo $#
 if [ "$#" -ne 2 ]; then
   echo "error: unzip must take 2 parameters"
 else
-  unzip "$1" -d $2
+  unzip -u "$1" -d $2
+  dir=$(pwd)
   cd $2
   files=(*)
   # echo "${files[@]}"
   for i in "${!files[@]}"; do
     echo ${files[i]}
-    new_dir=$(parse_folder_name "${files[i]}" "a1")
+    new_dir=$(parse_folder_name "${files[i]}")
     if [ "$new_dir" != "" ]; then
       mkdir $new_dir
-      unzip "${files[i]}" -d $new_dir
+      unzip -u "${files[i]}" -d $new_dir
       rm "${files[i]}"
     fi
   done
-  cd ..
+  cd "$dir"
   rm "$1"
 fi
 }
@@ -33,7 +38,7 @@ fi
 # $1 is for folder name
 # $2 is assignment name
 parse_folder_name(){
-  if [ "$#" -ne 2 ]; then
+  if [ "$#" -ne 1 ]; then
     # return would not be correct
     # echo "error: parse_folder_name requires folder name"
     echo ""
@@ -42,7 +47,7 @@ parse_folder_name(){
     echo ""
     return 0
   else
-    name="$2"
+    name="a"
     for w in $1
     do
       # echo $w
@@ -60,40 +65,6 @@ parse_folder_name(){
   fi
 }
 
-# assume already have the folders unzipped
-# validate all the files under appropriate folders
-# also clean up the output
-validate(){
-  output_filename="output.txt"
-  p=$(pwd)
-  cd $1
-  if [ -f $output_filename ]; then
-    rm $output_filename
-  fi
-  files=(*)
-  for i in "${!files[@]}"; do
-    new_dir=${files[i]}
-    if [[ -d $new_dir ]]; then
-      cd "$new_dir"
-      inner_files=(*)
-      for j in "${!inner_files[@]}"; do
-        if [[ "${inner_files[j]}" =~ __.* ]]; then
-          echo "skipping directory $new_dir/${inner_files[j]}"
-        else
-          echo "checking dir: $new_dir/${inner_files[j]}" >> ../$output_filename
-          java -Xss512k -jar $p/node_modules/vnu-jar/build/dist/vnu.jar --skip-non-html ${inner_files[j]} >> ../$output_filename 2>&1
-          java -Xss512k -jar $p/node_modules/vnu-jar/build/dist/vnu.jar --skip-non-css ${inner_files[j]} >> ../$output_filename 2>&1
-          echo -e "\n" >> ../$output_filename
-        fi
-      done
-      cd ..
-    else
-      echo "$new_dir is not directory...skipping..."
-    fi
-  done
-  # clean up
-  output_cleanup $output_filename $2
-}
 
 # clean up the output file to remove all the path that reveals my computer's path structure
 output_cleanup() {
@@ -104,43 +75,111 @@ output_cleanup() {
     exit 1
   fi
   echo "going to clean up "
+  #TODO: some problem with this
   sed -i 's/file.*'$folder'/file:\/'$folder'/g' $file
   echo "clean up done"
 }
 
 # print usage
 print_usage(){
-  echo -e "usage: $0 [-u src folder] [-v src dst] [-i file_folder individual_folder]
+  echo -e "usage: $0 [-u src folder] [-v src dst] [-i file_folder individual_folder] [-o path file]
     \n\t-i: validate individual HTML with individual_folder/*/file_folder(or name) and produce tmp.txt
     \n\t-v: validate HTMLs under src folder and produce output.txt, only display path from folder onwards
     \n\t-u: unzip all .zip folders in src to specific named folders in dst
     \n\t-c: clean-up output.txt
+    \n\t-o: open up path/file in chrome
     \nnote: can only run 1 flag at same time; ignores extra parameters"
 }
 
-# mark individual files with regex as file names
-# $1 file name
-# saves to tmp.txt
-validate_individual(){
-  file_name="$3"
-  if [ "$file_name" == "" ]; then
-    echo "-i must have file_name; can be regex" >&2
-    exit 1
+# validate a whole folder
+validate_folder(){
+  local folder="$1"
+  local newF=${folder#*a_}
+  local newF=${newF%\/}
+  folder=${folder%\/}
+  local assignment="$2"
+  # local part="$3"
+  outFile="../results/assignment$assignment/$newF.txt"
+  # echo "inside validate folder"
+  echo $outFile
+  # exit 1
+  # make folder structures and output text files
+  if [[ ! -d "../results/assignment$assignment" ]]; then
+    mkdir -p ../results/assignment$assignment
   fi
-  java -Xss512k -jar node_modules/vnu-jar/build/dist/vnu.jar --skip-non-html "$file_name" > tmp.txt 2>&1
-  # $3 is assignment2
-  output_cleanup tmp.txt $2
+  if [[ ! -f $outFile ]]; then
+    touch "$outFile"
+    echo "created new file $outFile"
+  fi
+
+  # validation
+  fpath="" #global
+  # echo "part $part"
+  # if [[ "$part" == "*" ]]; then
+    #no wild card here
+  ls $folder
+  fpath=$(find "$folder"/ -name index.html)
+  # else
+    # get_path "$folder" "$part"
+  # fi
+  echo "file is: $fpath"
+  fpath=$(dirname  "$fpath")
+  echo "path is: $fpath"
+  npm run vnu-html "$fpath" >> "$outFile" 2>&1
+  npm run vnu-css "$fpath" >> "$outFile" 2>&1
+  output_cleanup $outFile "a_"
 }
 
-# fname="70537-67796 - Michael Yee - Sep 11, 2018 423 PM - a1_Michael_Yee.zip.zip
-# "
+# get_path(){
+#   folder="$1"
+#   part="$2"
+#   echo $folder
+#   echo $part
+#   # yes wild card
+#   fpaths=()
+#   while IFS= read -r -d $'\0'; do
+#     fpaths+=("$REPLY")
+#     # echo $REPLY
+#   done << (find $folder/ -name index.html -print0)
+#   len=${#fpaths[*]}
+#   # echo $len
+#   i=0
+#   while [ $i -lt $len ]; do
+#     if [[ ${fpaths[$i]} == *[pP]art$part* ||  ${fpaths[$i]} == *ment*$part* ]]; then
+#       fpath=${fpaths[$i]}
+#     fi
+#     # echo ${fpaths[$i]}
+#     let i++
+#   done
+# }
+
+# open up a local file in chrome (useful for marking 1030)
+
+open_chrome_url(){
+  local path="$1"
+  local part="$2"
+  # if [[ "$part" == "*" ]]; then
+    # path=$(find "$path/" -name index.html)
+    # path=$(dirname "$path")
+    # start chrome "$path"/index.html
+    # start chrome "$path"/style.css
+  # else
+    # get_path "$path" "$part"
+    # start chrome "$fpath"
+  # fi
+  start chrome "$path"
+  # start chrome "$path"/index.html
+  # start chrome "$path"/style.css
+  # TODO: only works for windows. linux use xdg-open and OSX uses open
+}
+
 # parse_folder_name "$fname" "a1"
 
 # using flags
 # -v src: validate HTMLs under this folder and produce a output.txt with all results
 # -u src
 # adapted from https://stackoverflow.com/questions/18414054/bash-getopts-reading-optarg-for-optional-flags
-if [[ "$1" =~ ^((-{1,2})([Hh]$|[Hh][Ee][Ll][Pp])|)$ ]]; then
+if [[ "$#" -lt 1 ]]; then
   print_usage;
   exit 1
 else
@@ -160,18 +199,26 @@ else
         echo "inside u $src $dst"
         ;;
       "-v")
-        echo "inside v"
-        src="$1";
-        folder="$2";
-        validate $src $folder
-        ;;
-      "-i")
-        echo "inside i"
-        validate_individual "$2" "$3"
+        folder="$1"
+        newF=${folder#*a_}
+        newF=${newF%\/}
+        assignment="$2"
+        # part="$3"
+        # echo "inside v $part"
+        # validate_folder "$folder" "$assignment" "$part"
+        validate_folder "$folder" "$assignment"
+        # open up the output file or udpate it
+        start chrome "../results/assignment$assignment/$newF.txt"
+        # open_chrome_url "$folder" "$part"
+        open_chrome_url "$folder" "ABC"
+        npm cache clean --force
         ;;
       "-c")
         echo "clean up"
         output_cleanup "$1" "$2"
+        ;;
+      "-o")
+        open_chrome_url "$1" "$2"
         ;;
       *)
         echo "ERROR: Invalid option: \""$opt"\"" >&2
